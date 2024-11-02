@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="definitions.js" defer></script>
+    <script src="script.js" defer></script>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="initial-scale=1" />
+    <title>Bandwidth Tables</title>
+    <style>
+
+body {
+	font-family: 'Open Sans', sans-serif;
+	line-height: 1.5;
+	background-color: Canvas;
+	color: CanvasText;
+  color-scheme: light dark;
+}
+
+    .sufficient_speed {
+      background-color: lime;
+    }
+    .insufficient_speed {
+      background-color: pink;
+    }
+    .edge_speed {
+      background-color: orange;
+    }
+@media (prefers-color-scheme: dark) {
+    .sufficient_speed {
+      background-color: green;
+    }
+    .insufficient_speed {
+      background-color: red;
+    }
+    .edge_speed {
+      background-color: darkorange;
+    }
+  }
+    .horiz {
+      display: flex;
+      gap: 3em;
+      /*flex-direction: column;*/
+      flex-wrap: wrap;
+    }/*
+    @media screen and (min-width:1024px) {
+
+    .horiz {
+      flex-direction: row;
+    }
+    }*/
+table {
+	text-align: left;
+	border-collapse: collapse;
+	table-layout: fixed;
+}
+
+thead {
+	border-block-end: 2px solid;
+	background: highlight;
+	Color: HighlightText;
+}
+
+th,
+td {
+	border: 1px solid buttonborder;
+	padding: 0.25rem 0.75rem;
+	vertical-align: baseline;
+}
+.half {
+  font-style: italic;
+}
+thead.noNames th:not(:first-child) {
+	width: 5em;
+}
+th,
+caption, .showNames .name {
+	text-align: start;
+}
+
+thead th:not(:first-child),
+td {
+	text-align: end;
+}
+label {
+padding-right: 1.5em;
+}
+.name, th, .speed {
+  white-space: nowrap;
+}
+.noNames span.nname:not(:first-child) {
+  display: none;
+}
+.showNames span.name {
+  display: block;
+}
+.showNames span.nname:not(:first-child) {
+  font-weight: normal;
+}
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <h1>Bandwidth Comparisions</h1>
+      <p>
+      These interactive tables show the speeds of several common standards. Use the radio buttons to change the visualized values. Use the extra multiple for 2 or 4 port NICs, etc. Click on a table to show which standards can probably support a connection that can provide full bandwidth to the clicked bandwidth. Each standard is named on the left, and tooltips show alternate names. The columns are the lane count (relevant PCIe, and later versions of USB).
+      </p>
+      <h3>Math Options</h3>
+      <div>
+
+	<input type="radio" id="iec" value="iec" v-model="mode_si" />
+	<label for="iec">Binary Base (1024)</label>
+
+	<input type="radio" id="si" value="si" v-model="mode_si" />
+	<label for="si">Decimal Base (1000)</label>
+
+      </div>
+      <div>
+
+	<input type="radio" id="bytes" value="bytes" v-model="mode" />
+	<label for="bytes">Bytes</label>
+
+	<input type="radio" id="bits" value="bits" v-model="mode" />
+	<label for="bits">Bits</label>
+
+      </div>
+
+      <h3>Include/Exclude Overhead</h3>
+      <div>
+
+	<input type="radio" id="nominal" value="nominal" v-model="mode_overhead" />
+	<label for="nominal">Nominal Bitrate</label>
+	<input type="radio" id="coding" value="coding" v-model="mode_overhead" />
+	<label for="coding">Excluding Coding Overhead</label>
+	<input type="radio" id="assumed" value="assumed" v-model="mode_overhead" />
+	<label for="assumed">After All Overhead (approximate, varies depending on usage)</label>
+
+      </div>
+      <h3>Other Options</h3>
+      <div> Extra multiple:
+	<input type="radio" id="x1" value="1" v-model="speed_mult" />
+	<label for="x1">Normal</label>
+	<input type="radio" id="x2" value="2" v-model="speed_mult" />
+	<label for="x2">2x</label>
+	<input type="radio" id="x4" value="4" v-model="speed_mult" />
+	<label for="x4">4x</label>
+
+      </div>
+      <div> <label for="showNames">Show Alternate Names: </label><input type="checkbox" id="showNames" v-model="show_names" />
+	</div>
+      <div>Currently selected speed: <em>{{ softFormat() }}</em></div>
+<div class="horiz">
+      <div v-for="defobj in objects">
+        <h2>{{ defobj.name }}</h2>
+        <table v-bind:class="{ showNames: show_names, noNames: !show_names }">
+        <thead>
+
+          <tr>
+          <th>Name</td>
+
+          <th v-for="lane in defobj.all_lanes">x{{ lane }}</td>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="version in defobj.versions">
+            <th v-bind:title="version.names.join('\n')" ><span class="name nname" v-for="name in version.names">{{name}}</th>
+
+            <template v-for="(lane, laneix) in version.lanes" :key="laneix">
+            <td v-on:click="speed=(lane ? lane.speed.plain_bits * lane.lane_count : null)" v-bind:class="toClasses(lane)" v-bind:title="lane ? lane.names.join('\n') : 'N/A'"><span v-if="!show_names" v-bind:class="[speed, lane &amp;&amp; lane.duplex == 'half' ? 'half' : '']">{{ softFormatLane(lane) }}</span><span class="name invname" v-if="lane && show_names" v-for="name in lane.names">{{name}}</td>
+            </template>
+          </tr>
+        </tbody>
+        </table>
+      </div>
+      </div>
+      *half duplex
+    </div>
+  </body>
+</html>
